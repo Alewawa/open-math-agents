@@ -102,7 +102,6 @@ private theorem auxiliary_prime {a p : ℕ} (ha : 0 < a) (hp : p.Prime) (hc : p.
       rw [heq, hχ, if_neg hnot] at hrec
       omega
 
-omit in
 /-- If `a * c = q + 1` and `q * d = n + 1`, the denominators are `d * c`,
 `n * c` and `d * n * c`. -/
 private theorem solve_from_divisor {a n q : ℕ} (hq : 2 ≤ q) (hqn : q ≤ n)
