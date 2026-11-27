@@ -154,7 +154,7 @@ lemma odd_clique_missing_colors : H2 := by
     by_contra! hn
     let G : SimpleGraph Q :=
       { Adj := fun a b => a.val ≠ b.val ∧ e a.val b.val = i
-        symm := fun {a b} h => ⟨h.1.symm, (hsym b b.property a a.property).trans h.2⟩
+        symm := ⟨fun a b h => ⟨h.1.symm, (hsym b b.property a a.property).trans h.2⟩⟩
         loopless := ⟨fun _ h => h.1 rfl⟩ }
     have degree_one (a : Q) : G.degree a = 1 := by
       apply SimpleGraph.degree_eq_one_iff_existsUnique_adj.mpr
@@ -177,5 +177,30 @@ lemma odd_clique_missing_colors : H2 := by
   intro a ha b hb hab i j hi hj hij
   have h := (missing_eq ⟨a, ha⟩ i hi).trans (hij.trans (missing_eq ⟨b, hb⟩ j hj).symm)
   exact hab (congrArg Subtype.val (hinj h))
+
+/-- Restriction to the blocks avoiding a second point gives the converse. -/
+lemma restrict_coloring : OMA.R_Erdos835_erdos_835_variants_johnson_R1.H1 → H1 := by
+  classical
+  rintro ⟨k, x, hk, he, ⟨C⟩⟩
+  have : Nontrivial (Fin (2 * k)) := Fin.nontrivial_iff_two_le.mpr (by omega)
+  obtain ⟨y, hy⟩ := exists_ne x
+  let c (v : Finset (Fin (2 * k))) : Fin (k + 1) :=
+    if h : v.card = k ∧ x ∈ v then C ⟨⟨v, h.1⟩, h.2⟩ else 0
+  refine ⟨k, x, y, hk, he, hy.symm, c, ?_⟩
+  intro s hs hx _ a ha b hb _ _ hab
+  have block (t : Fin (2 * k)) (ht : t ∉ s) :
+      (insert t s).card = k ∧ x ∈ insert t s :=
+    ⟨(Finset.card_insert_of_notMem ht).trans hs, Finset.mem_insert_of_mem hx⟩
+  have inter : insert a s ∩ insert b s = s := by
+    ext t
+    simp only [Finset.mem_inter, Finset.mem_insert]
+    grind
+  simp only [c, dif_pos (block a ha), dif_pos (block b hb)]
+  apply C.valid
+  change (insert a s ∩ insert b s).card + 1 = k
+  rwa [inter]
+
+theorem slice_iff : OMA.R_Erdos835_erdos_835_variants_johnson_R1.H1 ↔ H1 :=
+  ⟨restrict_coloring, fun h => main h odd_clique_missing_colors⟩
 
 end OMA.R_Erdos835_erdos_835_variants_johnson_R1_H1_R1
