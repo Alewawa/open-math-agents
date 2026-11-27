@@ -1,5 +1,12 @@
 import OMAReductions.R_Erdos242_erdos_242_variants_schinzel_generalization_R1
 
+/-!
+# Reduction to primes and powers of exceptional primes
+
+Under the two hypotheses below, a sufficiently large admissible denominator has a
+prime power divisor whose decomposition scales to the denominator.
+-/
+
 open Filter
 open scoped BigOperators
 
@@ -45,8 +52,8 @@ theorem main : H1 → H2 → OMA.R_Erdos242_erdos_242_variants_schinzel_generali
     ∃ x y z : ℕ, 1 ≤ x ∧ x < y ∧ y < z ∧ (a / n : ℚ) = 1 / x + 1 / y + 1 / z
   change ∀ᶠ n : ℕ in atTop, Admissible n → Splits n
   obtain ⟨B, hB⟩ := eventually_atTop.1 (hPrime a ha)
-  have hExponent : ∀ p : ℕ, ∃ k : ℕ, p.Prime →
-      ∀ n : ℕ, 0 < n → Admissible n → p ^ k ∣ n → Splits n := by
+  have hExponent : ∀ p : ℕ, ∃ k : ℕ,
+      ∀ n : ℕ, p.Prime → 0 < n → Admissible n → p ^ k ∣ n → Splits n := by
     intro p
     by_cases hp : p.Prime
     · by_cases hSplit : Splits p
@@ -56,7 +63,7 @@ theorem main : H1 → H2 → OMA.R_Erdos242_erdos_242_variants_schinzel_generali
           exact ⟨k, fun _ _ hn _ hd => scale hn hd ⟨x, y, z, hx, hxy, hyz, heq⟩⟩
         · obtain ⟨k, hk⟩ := not_forall.mp hAllowed
           exact ⟨k, fun _ _ _ hn hd => (hk fun hs => hn (p ^ k) hd hs).elim⟩
-    · exact ⟨0, fun h => (hp h).elim⟩
+    · exact ⟨0, fun _ h => (hp h).elim⟩
   choose exponent hExponent using hExponent
   let smallPrimes := (Finset.range (max B (2 * a))).filter Nat.Prime
   let C := ∏ p ∈ smallPrimes, p ^ exponent p
@@ -81,7 +88,7 @@ theorem main : H1 → H2 → OMA.R_Erdos242_erdos_242_variants_schinzel_generali
       have hPrimeP := (Nat.mem_primeFactors.mp hp).1
       apply Nat.pow_le_pow_right hPrimeP.pos
       by_contra! hTooLarge
-      exact hNoSplit (hExponent p hPrimeP n hnpos hAllowed
+      exact hNoSplit (hExponent p n hPrimeP hnpos hAllowed
         ((hPrimeP.pow_dvd_iff_le_factorization (Nat.ne_of_gt hnpos)).2 (le_of_lt hTooLarge)))
     _ ≤ C := by
       apply Finset.prod_le_prod_of_subset_of_one_le' hSupport
