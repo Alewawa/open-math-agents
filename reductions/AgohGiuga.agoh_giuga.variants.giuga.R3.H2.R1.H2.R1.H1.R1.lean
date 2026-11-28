@@ -1,6 +1,8 @@
 import OMAReductions.R_AgohGiuga_agoh_giuga_variants_giuga_R3_H2_R1_H2_R1
 
-open scoped BigOperators
+/-! The dyadic Mertens bound and a smaller sieve reduce the compatible-prime cardinality bound. -/
+
+open scoped BigOperators Interval
 
 namespace OMA.R_AgohGiuga_agoh_giuga_variants_giuga_R3_H2_R1_H2_R1_H1_R1
 
@@ -44,11 +46,136 @@ private theorem weighted_prefix_le (a b w : ℕ → ℝ) (k : ℕ)
           add_le_add_right (ih (by omega)) _
         _ = (∑ i ∈ Finset.range (j + 1), d i) * w j := by
           rw [Finset.sum_range_succ, add_mul]
-        _ ≤ _ := mul_le_mul_of_nonpos_right (hw j) (hneg (j + 1) hj)
+        _ ≤ _ := mul_le_mul_of_nonpos_left (hw j) (hneg (j + 1) hj)
   have h := (hsum k le_rfl).trans (mul_nonpos_of_nonpos_of_nonneg (hneg k le_rfl) hn)
   dsimp only [d] at h
   simp only [sub_mul, Finset.sum_sub_distrib] at h
   exact sub_nonpos.mp h
+
+private theorem dyadic_weighted_upper (j : ℕ) (hj : 18 ≤ j) (hj' : j ≤ 34) :
+    (∑ p ∈ (Finset.Ioc 0 (2^j)).filter Nat.Prime,
+      Real.log (p : ℝ) / (p : ℝ)) ≤ (j : ℝ) * Real.log 2 := by
+  classical
+  let N : ℕ := 2 ^ j
+  let P := (Finset.Ioc 0 N).filter Nat.Prime
+  let D : Finset ℕ := {4, 8, 16, 9}
+  let g (d : ℕ) : ℝ := ArithmeticFunction.vonMangoldt d * ((N / d : ℕ) : ℝ)
+  let L (p : ℕ) : ℝ := Real.log (p : ℝ)
+  have hN : 2^18 ≤ N := Nat.pow_le_pow_right (by norm_num) hj
+  have hNpos : (0 : ℝ) < N := by
+    exact_mod_cast (pow_pos Nat.zero_lt_two j : 0 < (2 : ℕ) ^ j)
+  have hNge : (262144 : ℝ) ≤ N := by exact_mod_cast hN
+  have hfloor (d : ℕ) : (N : ℝ) / (d : ℝ) ≤ ((N / d : ℕ) : ℝ) + 1 := by
+    have hh := (Nat.lt_floor_add_one ((N : ℝ) / (d : ℝ))).le
+    rwa [Nat.floor_div_natCast, Nat.floor_natCast] at hh
+  have hlog : Real.log (N : ℝ) = (j : ℝ) * Real.log 2 := by
+    simp only [N, Nat.cast_pow, Nat.cast_ofNat, Real.log_pow]
+  have hlog2 : Real.log 2 < (7:ℝ)/10 := by linarith only [Real.log_two_lt_d9]
+  have hlog3lo : (1:ℝ) < Real.log 3 := by linarith only [Real.log_three_gt_d9]
+  have hlog3hi : Real.log 3 < 2 := by linarith only [Real.log_three_lt_d9]
+  have hlog4 : Real.log 4 = 2 * Real.log 2 := by
+    rw [show (4 : ℝ) = (2 : ℝ) ^ (2 : ℕ) by norm_num, Real.log_pow] <;> norm_num
+  have htheta : (∑ p ∈ P, L p) ≤ Real.log 4 * N := by
+    simpa only [Chebyshev.theta, Nat.floor_natCast, P, L] using
+      Chebyshev.theta_le_log4_mul_x hNpos.le
+  have hprime : (N : ℝ) * (∑ p ∈ P, L p / p) ≤ (∑ p ∈ P, g p) + ∑ p ∈ P, L p := by
+    rw [Finset.mul_sum, ← Finset.sum_add_distrib]
+    apply Finset.sum_le_sum
+    intro p hp
+    have hpP := (Finset.mem_filter.mp hp).2
+    dsimp only [g, L]
+    rw [ArithmeticFunction.vonMangoldt_apply_prime hpP, ← mul_add]
+    calc
+      _ = Real.log (p : ℝ) * ((N : ℝ) / (p : ℝ)) := by ring
+      _ ≤ _ := mul_le_mul_of_nonneg_left (hfloor p)
+        (Real.log_nonneg (by exact_mod_cast hpP.one_le))
+  have hl₄ : ArithmeticFunction.vonMangoldt 4 = Real.log 2 := by
+    change ArithmeticFunction.vonMangoldt (2^2) = _
+    rw [ArithmeticFunction.vonMangoldt_apply_pow (by decide), ArithmeticFunction.vonMangoldt_apply_prime Nat.prime_two] <;> norm_num
+  have hl₈ : ArithmeticFunction.vonMangoldt 8 = Real.log 2 := by
+    change ArithmeticFunction.vonMangoldt (2^3) = _
+    rw [ArithmeticFunction.vonMangoldt_apply_pow (by decide), ArithmeticFunction.vonMangoldt_apply_prime Nat.prime_two] <;> norm_num
+  have hl₁₆ : ArithmeticFunction.vonMangoldt 16 = Real.log 2 := by
+    change ArithmeticFunction.vonMangoldt (2^4) = _
+    rw [ArithmeticFunction.vonMangoldt_apply_pow (by decide), ArithmeticFunction.vonMangoldt_apply_prime Nat.prime_two] <;> norm_num
+  have hl₉ : ArithmeticFunction.vonMangoldt 9 = Real.log 3 := by
+    change ArithmeticFunction.vonMangoldt (3^2) = _
+    rw [ArithmeticFunction.vonMangoldt_apply_pow (by decide), ArithmeticFunction.vonMangoldt_apply_prime Nat.prime_three] <;> norm_num
+  have hpower (d : ℕ) (v : ℝ) (hv : 0 ≤ v)
+      (h : ArithmeticFunction.vonMangoldt d = v) :
+      v * ((N : ℝ) / d - 1) ≤ g d := by
+    rw [show g d = v * ((N / d : ℕ) : ℝ) by simp only [g, h]]
+    exact mul_le_mul_of_nonneg_left (by linarith only [hfloor d]) hv
+  have hpowers : (7 * (N : ℝ) / 16 - 3) * Real.log 2 +
+      ((N : ℝ) / 9 - 1) * Real.log 3 ≤ ∑ p ∈ D, g p := by
+    have h2 : 0 ≤ Real.log 2 := Real.log_nonneg (by norm_num)
+    have h4 := hpower 4 (Real.log 2) h2 hl₄
+    have h8 := hpower 8 (Real.log 2) h2 hl₈
+    have h16 := hpower 16 (Real.log 2) h2 hl₁₆
+    have h9 := hpower 9 (Real.log 3) (by linarith only [hlog3lo]) hl₉
+    simp [D]
+    norm_num at h4 h8 h16 h9
+    nlinarith only [h4, h8, h16, h9]
+  have hd : Disjoint P D := by
+    apply Finset.disjoint_left.mpr
+    intro d h₁ h₂
+    have hp := (Finset.mem_filter.mp h₁).2
+    simp [D] at h₂
+    rcases h₂ with hd | hd | hd | hd
+    · exact (by decide : ¬ Nat.Prime 4) (hd ▸ hp)
+    · exact (by decide : ¬ Nat.Prime 8) (hd ▸ hp)
+    · exact (by decide : ¬ Nat.Prime 16) (hd ▸ hp)
+    · exact (by decide : ¬ Nat.Prime 9) (hd ▸ hp)
+  have hTogether : (∑ p ∈ P, g p) + ∑ p ∈ D, g p ≤ ∑ d ∈ Finset.Ioc 0 N, g d := by
+    rw [← Finset.sum_union hd]
+    apply Finset.sum_le_sum_of_subset_of_nonneg
+    · intro p hp
+      rcases Finset.mem_union.mp hp with hp | hp
+      · exact (Finset.mem_filter.mp hp).1
+      · simp [D] at hp
+        exact Finset.mem_Ioc.mpr (by omega)
+    · intro p _ _
+      exact mul_nonneg ArithmeticFunction.vonMangoldt_nonneg (Nat.cast_nonneg _)
+  have hIdentity : (∑ d ∈ Finset.Ioc 0 N, g d) = ∑ d ∈ Finset.Ioc 0 N, L d := by
+    simpa only [g, L, ArithmeticFunction.vonMangoldt_mul_zeta, ArithmeticFunction.log_apply] using
+      (ArithmeticFunction.sum_Ioc_mul_zeta_eq_sum ArithmeticFunction.vonMangoldt N).symm
+  have hlogfact : (∑ d ∈ Finset.Ioc 0 N, L d) ≤
+      (N : ℝ) * Real.log N - N + 1 + Real.log N := by
+    have hsub : (Finset.Ioc 0 N : Finset ℕ) = insert N (Finset.Ico 1 N) := by
+      ext d
+      simp only [Finset.mem_Ioc, Finset.mem_insert, Finset.mem_Ico]
+      omega
+    rw [hsub, Finset.sum_insert (by simp)]
+    have hm : MonotoneOn Real.log (Set.Icc (1 : ℝ) N) := by
+      intro a ha b _ hab
+      exact Real.log_le_log (by linarith [ha.1]) hab
+    have hi := MonotoneOn.sum_le_integral_Ico (f := Real.log)
+      (show 1 ≤ N by omega) hm
+    change (∑ d ∈ Finset.Ico 1 N, L d) ≤ ∫ t in (1 : ℝ)..(N : ℝ), Real.log t at hi
+    rw [integral_log] at hi
+    simp only [Real.log_one, mul_zero, zero_sub] at hi
+    dsimp only [L]
+    linarith only [hi]
+  have hmain : (N : ℝ) * ((∑ p ∈ P, L p / p) - Real.log N) ≤
+      (N : ℝ) * ((25 / 16) * Real.log 2 - 1 - Real.log 3 / 9) +
+        (1 + Real.log N + 3 * Real.log 2 + Real.log 3) := by
+    rw [hlog4] at htheta
+    nlinarith only [hprime, htheta, hpowers, hTogether, hIdentity, hlogfact]
+  have hneg : (25 / 16 : ℝ) * Real.log 2 - 1 - Real.log 3 / 9 ≤ -(5/288) := by
+    linarith only [hlog2, hlog3lo]
+  have hjR : (j : ℝ) ≤ 34 := by exact_mod_cast hj'
+  have hlogNlt : Real.log (N : ℝ) ≤ 24 := by
+    rw [hlog]
+    calc
+      _ ≤ (34 : ℝ) * Real.log 2 := mul_le_mul_of_nonneg_right hjR (by positivity)
+      _ ≤ _ := by linarith only [hlog2]
+  have hmain' := hmain.trans (add_le_add_right (mul_le_mul_of_nonneg_left hneg hNpos.le) _)
+  have hfinal : (N : ℝ) * ((∑ p ∈ P, L p / p) - Real.log N) ≤ 0 := by
+    linarith only [hmain', hNge, hlogNlt, hlog2, hlog3hi]
+  have hdone := nonpos_of_mul_nonpos_right hfinal hNpos
+  have hres := sub_nonpos.mp hdone
+  rw [hlog] at hres
+  exact hres
 
 private theorem middle_bound
     (hlo : 15 * Real.log 2 ≤ ∑ p ∈ (Finset.Ioc 0 (2^17)).filter Nat.Prime,
@@ -135,16 +262,9 @@ def H2 : Prop :=
   15 * Real.log 2 ≤
     ∑ p ∈ (Finset.Ioc 0 (2^17)).filter Nat.Prime, Real.log (p : ℝ) / (p : ℝ)
 
-/-- Upper bounds for the logarithmically weighted prime sum at the endpoints
-of the dyadic intervals, by the factorial estimate. -/
-def H3 : Prop :=
-  ∀ j : ℕ, 18 ≤ j → j ≤ 34 →
-    (∑ p ∈ (Finset.Ioc 0 (2^j)).filter Nat.Prime, Real.log (p : ℝ) / (p : ℝ)) ≤
-      (j : ℝ) * Real.log 2
-
-theorem main : H1 → H2 → H3 → OMA.R_AgohGiuga_agoh_giuga_variants_giuga_R3_H2_R1_H2_R1.H1 := by
+theorem main : H1 → H2 → OMA.R_AgohGiuga_agoh_giuga_variants_giuga_R3_H2_R1_H2_R1.H1 := by
   classical
-  intro hsmall hlo hhi S hprime hcompat n hn hdiv hsum
+  intro hsmall hlo S hprime hcompat n hn hdiv hsum
   by_contra! hc
   let f (p : ℕ) : ℝ := (p : ℝ)⁻¹
   have hscale : (n : ℝ) * (∑ p ∈ S, f p) = ((∑ p ∈ S, n / p : ℕ) : ℝ) := by
@@ -162,7 +282,7 @@ theorem main : H1 → H2 → H3 → OMA.R_AgohGiuga_agoh_giuga_variants_giuga_R3
       exact_mod_cast hsum
     have hnR : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
     rw [← hscale, mul_comm (2 : ℝ)] at hcast
-    exact (mul_lt_mul_left hnR).mp hcast
+    exact (mul_lt_mul_iff_right₀ hnR).mp hcast
   let small := S.filter (fun p => p ≤ 2^17)
   let rest := S.filter (fun p => 2^17 < p)
   let mid := rest.filter (fun p => p ≤ 2^34)
@@ -180,7 +300,7 @@ theorem main : H1 → H2 → H3 → OMA.R_AgohGiuga_agoh_giuga_variants_giuga_R3
       exact ⟨(hprime p hpS).1, (hprime p hpS).2, hpY⟩
     · exact fun p hp q hq => hcompat p (Finset.mem_filter.mp hp).1 q (Finset.mem_filter.mp hq).1
   have hmid : (∑ p ∈ mid, f p) ≤ 5 / 6 := by
-    apply le_trans _ (middle_bound hlo hhi)
+    apply le_trans _ (middle_bound hlo dyadic_weighted_upper)
     apply Finset.sum_le_sum_of_subset_of_nonneg
     · intro p hp
       obtain ⟨hpR, hpX⟩ := Finset.mem_filter.mp hp
