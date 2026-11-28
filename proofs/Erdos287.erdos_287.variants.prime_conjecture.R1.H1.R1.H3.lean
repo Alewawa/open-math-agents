@@ -29,7 +29,7 @@ private def intervalIndicator (a b : ℝ) : ℝ → ℂ :=
 private lemma intervalIndicator_integrable (a b : ℝ) :
     Integrable (intervalIndicator a b) := by
   rw [intervalIndicator, integrable_indicator_iff measurableSet_Icc]
-  exact integrable_const 1
+  exact continuous_const.integrableOn_Icc
 
 private lemma fourier_interval (a b t : ℝ) :
     𝓕 (intervalIndicator a b) t = ∫ x in Icc a b, phase (-(x * t)) := by
@@ -147,7 +147,7 @@ private lemma integral_kernel : ∫ t, kernel t = 1 := by
         simp [L, f, g, intervalIndicator, h₁, h₂, hx]
     simp_rw [hi]
     rw [integral_indicator_const _ measurableSet_Icc, Real.volume_real_Icc]
-    simp
+    simp [Complex.real_smul]
   have hc : Continuous (f ⋆[L] g) := by
     simp_rw [hconv]
     fun_prop
@@ -170,8 +170,9 @@ private lemma model_eq (a t : ℝ) : model a t = (phase (-(a * t)) * kernel t).r
     have h := intervalIntegral.integral_comp_mul_left (a := (0 : ℝ)) (b := 1) g
       (c := -2) (by norm_num)
     rw [show (-2 : ℝ) * 0 = 0 by ring, show (-2 : ℝ) * 1 = -2 by ring,
-      intervalIntegral.integral_symm 0 (-2)] at h
-    simpa [smul_eq_mul] using h
+      intervalIntegral.integral_symm (-2) 0, Complex.real_smul, Complex.ofReal_inv,
+      Complex.ofReal_neg, Complex.ofReal_ofNat, inv_neg, neg_mul, mul_neg, neg_neg] at h
+    exact h
   have hfg : Continuous f := by unfold f phase; fun_prop
   have hgg : Continuous g := by unfold g phase; fun_prop
   have hre (w : ℝ) : (phase (-w)).re = Real.cos (2 * Real.pi * w) := by
