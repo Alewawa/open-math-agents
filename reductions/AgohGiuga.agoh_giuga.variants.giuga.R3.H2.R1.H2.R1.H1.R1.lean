@@ -43,7 +43,7 @@ private theorem weighted_prefix_le (a b w : ℕ → ℝ) (k : ℕ)
       calc
         _ = (∑ i ∈ Finset.range j, d i * w i) + d j * w j := by rw [Finset.sum_range_succ]
         _ ≤ (∑ i ∈ Finset.range j, d i) * w j + d j * w j :=
-          add_le_add_right (ih (by omega)) _
+          add_le_add (ih (by omega)) le_rfl
         _ = (∑ i ∈ Finset.range (j + 1), d i) * w j := by
           rw [Finset.sum_range_succ, add_mul]
         _ ≤ _ := mul_le_mul_of_nonpos_left (hw j) (hneg (j + 1) hj)
@@ -84,11 +84,12 @@ private theorem dyadic_weighted_upper (j : ℕ) (hj : 18 ≤ j) (hj' : j ≤ 34)
     intro p hp
     have hpP := (Finset.mem_filter.mp hp).2
     dsimp only [g, L]
-    rw [ArithmeticFunction.vonMangoldt_apply_prime hpP, ← mul_add]
+    rw [ArithmeticFunction.vonMangoldt_apply_prime hpP]
     calc
       _ = Real.log (p : ℝ) * ((N : ℝ) / (p : ℝ)) := by ring
-      _ ≤ _ := mul_le_mul_of_nonneg_left (hfloor p)
-        (Real.log_nonneg (by exact_mod_cast hpP.one_le))
+      _ ≤ Real.log (p : ℝ) * (((N / p : ℕ) : ℝ) + 1) :=
+        mul_le_mul_of_nonneg_left (hfloor p) (Real.log_nonneg (by exact_mod_cast hpP.one_le))
+      _ = _ := by ring
   have hl₄ : ArithmeticFunction.vonMangoldt 4 = Real.log 2 := by
     change ArithmeticFunction.vonMangoldt (2^2) = _
     rw [ArithmeticFunction.vonMangoldt_apply_pow (by decide), ArithmeticFunction.vonMangoldt_apply_prime Nat.prime_two] <;> norm_num
@@ -104,7 +105,8 @@ private theorem dyadic_weighted_upper (j : ℕ) (hj : 18 ≤ j) (hj' : j ≤ 34)
   have hpower (d : ℕ) (v : ℝ) (hv : 0 ≤ v)
       (h : ArithmeticFunction.vonMangoldt d = v) :
       v * ((N : ℝ) / d - 1) ≤ g d := by
-    rw [show g d = v * ((N / d : ℕ) : ℝ) by simp only [g, h]]
+    change _ ≤ ArithmeticFunction.vonMangoldt d * ((N / d : ℕ) : ℝ)
+    rw [h]
     exact mul_le_mul_of_nonneg_left (by linarith only [hfloor d]) hv
   have hpowers : (7 * (N : ℝ) / 16 - 3) * Real.log 2 +
       ((N : ℝ) / 9 - 1) * Real.log 3 ≤ ∑ p ∈ D, g p := by
@@ -169,7 +171,7 @@ private theorem dyadic_weighted_upper (j : ℕ) (hj : 18 ≤ j) (hj' : j ≤ 34)
     calc
       _ ≤ (34 : ℝ) * Real.log 2 := mul_le_mul_of_nonneg_right hjR (by positivity)
       _ ≤ _ := by linarith only [hlog2]
-  have hmain' := hmain.trans (add_le_add_right (mul_le_mul_of_nonneg_left hneg hNpos.le) _)
+  have hmain' := hmain.trans (add_le_add (mul_le_mul_of_nonneg_left hneg hNpos.le) le_rfl)
   have hfinal : (N : ℝ) * ((∑ p ∈ P, L p / p) - Real.log N) ≤ 0 := by
     linarith only [hmain', hNge, hlogNlt, hlog2, hlog3hi]
   have hdone := nonpos_of_mul_nonpos_right hfinal hNpos
