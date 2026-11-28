@@ -151,8 +151,11 @@ private theorem dyadic_weighted_upper (j : ℕ) (hj : 18 ≤ j) (hj' : j ≤ 34)
     have hm : MonotoneOn Real.log (Set.Icc (1 : ℝ) N) := by
       intro a ha b _ hab
       exact Real.log_le_log (by linarith [ha.1]) hab
+    have hmCast : MonotoneOn Real.log (Set.Icc ((1 : ℕ) : ℝ) (N : ℝ)) := by
+      simpa only [Nat.cast_one] using hm
     have hi := MonotoneOn.sum_le_integral_Ico (f := Real.log)
-      (show 1 ≤ N by omega) hm
+      (show 1 ≤ N by omega) hmCast
+    simp only [Nat.cast_one] at hi
     change (∑ d ∈ Finset.Ico 1 N, L d) ≤ ∫ t in (1 : ℝ)..(N : ℝ), Real.log t at hi
     rw [integral_log] at hi
     simp only [Real.log_one, mul_zero, zero_sub] at hi
