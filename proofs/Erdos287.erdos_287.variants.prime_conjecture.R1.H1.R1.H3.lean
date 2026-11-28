@@ -6,7 +6,7 @@ import Mathlib.Analysis.SpecialFunctions.ImproperIntegrals
 import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 
 open Filter MeasureTheory Set
-open scoped FourierTransform Convolution
+open scoped FourierTransform Convolution Topology
 
 noncomputable section
 
@@ -81,7 +81,7 @@ private lemma norm_fourier_interval_decay {a b t : ℝ} (hab : a ≤ b) (ht : t 
   have hpi : (2 : ℝ) ≤ 2 * Real.pi := by linarith [Real.pi_gt_three]
   calc
     (2 : ℝ) ≤ 2 * Real.pi := hpi
-    _ = |t|⁻¹ * (2 * Real.pi * |t|) := by field_simp
+    _ = |t|⁻¹ * (2 * Real.pi * |t|) := by field_simp <;> ring
 
 private def kernel (t : ℝ) : ℂ :=
   𝓕 (intervalIndicator 1 2) t * 𝓕 (intervalIndicator (-2) 0) t
@@ -156,6 +156,10 @@ private lemma integral_kernel : ∫ t, kernel t = 1 := by
   rw [hfg, Real.fourierInv_eq] at hi
   simpa [hconv, map_zero_eq_one] using hi
 
+private lemma integral_complex_re {μ : Measure ℝ} {f : ℝ → ℂ} (hf : Integrable f μ) :
+    (∫ x, (f x).re ∂μ) = (∫ x, f x ∂μ).re :=
+  integral_re (𝕜 := ℂ) hf
+
 private def model (a t : ℝ) : ℝ :=
   ∫ u in Icc (1 : ℝ) 2, ∫ v in Icc (0 : ℝ) 1,
     Real.cos (2 * Real.pi * ((u + a - 2 * v) * t))
@@ -176,7 +180,7 @@ private lemma model_eq (a t : ℝ) : model a t = (phase (-(a * t)) * kernel t).r
   have hfg : Continuous f := by unfold f phase; fun_prop
   have hgg : Continuous g := by unfold g phase; fun_prop
   have hre (w : ℝ) : (phase (-w)).re = Real.cos (2 * Real.pi * w) := by
-    simp [phase, Complex.exp_ofReal_mul_I_re, mul_neg, Real.cos_neg]
+    rw [phase, Complex.exp_ofReal_mul_I_re, mul_neg, Real.cos_neg]
   have hsplit (u v : ℝ) : phase (-((u + a - 2 * v) * t)) =
       phase (-(a * t)) * f u * g (-2 * v) := by
     rw [← phase_add, ← phase_add]
@@ -186,11 +190,11 @@ private lemma model_eq (a t : ℝ) : model a t = (phase (-(a * t)) * kernel t).r
       (∫ v in Icc (0 : ℝ) 1, Real.cos (2 * Real.pi * ((u + a - 2 * v) * t))) =
         (phase (-(a * t)) * f u * ((2 : ℂ)⁻¹ * ∫ z in Icc (-2 : ℝ) 0, g z)).re := by
     simp_rw [← hre, hsplit]
-    rw [integral_re, integral_const_mul, hsub]
+    rw [integral_complex_re, integral_const_mul, hsub]
     exact (continuous_const.mul (hgg.comp (by fun_prop))).continuousOn.integrableOn_Icc
   unfold model
   simp_rw [hinner]
-  rw [integral_re, integral_mul_const, integral_const_mul, kernel, fourier_interval, fourier_interval]
+  rw [integral_complex_re, integral_mul_const, integral_const_mul, kernel, fourier_interval, fourier_interval]
   · change (_ * (∫ u in Icc (1 : ℝ) 2, f u) *
         ((2 : ℂ)⁻¹ * ∫ z in Icc (-2 : ℝ) 0, g z)).re =
         (_ * ((∫ u in Icc (1 : ℝ) 2, f u) * ∫ z in Icc (-2 : ℝ) 0, g z)).re / 2
@@ -218,7 +222,9 @@ private def singularIntegral (N : ℕ) : ℝ :=
 private lemma scale_singularIntegral (N : ℕ) (hN : 0 < N) :
     singularIntegral N = (N : ℝ) * ∫ t in Icc (-cutoff N) (cutoff N), model (N : ℝ)⁻¹ t := by
   let r : ℝ := N
-  have hr : 0 < r := by exact_mod_cast hN
+  have hr : 0 < r := by
+    change 0 < (N : ℝ)
+    exact_mod_cast hN
   let F := fun x y β : ℝ => Real.cos (2 * Real.pi * ((x + 1 - 2 * y) * β))
   have hy (x β : ℝ) :
       (∫ y in Icc (0 : ℝ) r, F x y β) = r * ∫ v in Icc (0 : ℝ) 1, F x (r * v) β := by
@@ -258,7 +264,7 @@ private lemma tendsto_normalized :
   let Φ := fun a t : ℝ => (phase (-(a * t)) * kernel t).re / 2
   have hmass : ∫ t, (kernel t).re / 2 = (1 / 2 : ℝ) := by
     simp_rw [div_eq_mul_inv]
-    rw [integral_mul_const, integral_re integrable_kernel, integral_kernel]
+    rw [integral_mul_const, integral_complex_re integrable_kernel, integral_kernel]
     simp
   have hΦ : ∀ a : ℝ, Continuous (Φ a) := by
     intro a
