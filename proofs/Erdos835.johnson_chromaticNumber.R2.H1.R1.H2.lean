@@ -1,0 +1,4 @@
+import OMAReductions.R_Erdos835_johnson_chromaticNumber_R2_H1_R1
+
+theorem OMA.solution : OMA.R_Erdos835_johnson_chromaticNumber_R2_H1_R1.H2 := by
+  exact OMA.R_Erdos835_johnson_chromaticNumber_R2_H1_R1.prime_of_residues
