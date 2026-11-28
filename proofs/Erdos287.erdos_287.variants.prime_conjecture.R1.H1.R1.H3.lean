@@ -5,6 +5,8 @@ import Mathlib.Analysis.Real.Pi.Bounds
 import Mathlib.Analysis.SpecialFunctions.ImproperIntegrals
 import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 
+/-! The normalized major-arc singular integral converges to one half. -/
+
 open Filter MeasureTheory Set
 open scoped FourierTransform Convolution Topology
 
@@ -68,13 +70,13 @@ private lemma norm_fourier_interval_decay {a b t : ℝ} (hab : a ≤ b) (ht : t 
     exact mul_ne_zero (Complex.ofReal_ne_zero.mpr (neg_ne_zero.mpr
       (mul_ne_zero (mul_ne_zero two_ne_zero Real.pi_ne_zero) ht))) Complex.I_ne_zero
   have hcn : ‖c‖ = (2 * Real.pi) * |t| := by
-    simp [c, norm_mul, abs_mul, abs_of_nonneg Real.pi_pos.le]
+    simp [c, abs_of_nonneg Real.pi_pos.le]
   rw [fourier_interval, as_intervalIntegral _ hab]
   simp_rw [hcoef]
   rw [integral_exp_mul_complex hc, norm_div, hcn]
   have hnum : ‖Complex.exp (c * ↑b) - Complex.exp (c * ↑a)‖ ≤ 2 := by
     rw [← hcoef, ← hcoef]
-    simpa [norm_phase] using norm_sub_le (phase (-(b * t))) (phase (-(a * t)))
+    simpa only [norm_phase, one_add_one_eq_two] using norm_sub_le (phase (-(b * t))) (phase (-(a * t)))
   have ht' := abs_pos.mpr ht
   refine (div_le_div_of_nonneg_right hnum (by positivity)).trans ?_
   apply (div_le_iff₀ (by positivity : 0 < 2 * Real.pi * |t|)).2
@@ -96,7 +98,7 @@ private lemma norm_kernel (t : ℝ) : ‖kernel t‖ ≤ 4 * (1 + t ^ 2)⁻¹ :=
   have hden : 0 < 1 + t ^ 2 := by positivity
   by_cases ht : t ^ 2 ≤ 1
   · have h₁ : ‖𝓕 (intervalIndicator 1 2) t‖ ≤ 1 := by
-      simpa using norm_fourier_interval_le (a := 1) (b := 2) (by norm_num) t
+      convert norm_fourier_interval_le (a := 1) (b := 2) (by norm_num) t using 1 <;> norm_num
     have h₂ : ‖𝓕 (intervalIndicator (-2) 0) t‖ ≤ 2 := by
       simpa using norm_fourier_interval_le (a := -2) (b := 0) (by norm_num) t
     rw [kernel, norm_mul, ← div_eq_mul_inv]
@@ -149,12 +151,14 @@ private lemma integral_kernel : ∫ t, kernel t = 1 := by
     rw [integral_indicator_const _ measurableSet_Icc, Real.volume_real_Icc]
     simp [Complex.real_smul]
   have hc : Continuous (f ⋆[L] g) := by
-    simp_rw [hconv]
+    have heq : (f ⋆[L] g) = fun s : ℝ => ↑(max (min 2 (s + 2) - max 1 s) 0) :=
+      funext hconv
+    rw [heq]
     fun_prop
   have hi := (hf.integrable_convolution L hg).fourierInv_fourier_eq
     (hfg.symm ▸ integrable_kernel) (v := 0) hc.continuousAt
   rw [hfg, Real.fourierInv_eq] at hi
-  simpa [hconv, map_zero_eq_one] using hi
+  simpa [hconv, show (2 : ℝ) - 1 = 1 by norm_num] using hi
 
 private lemma integral_complex_re {μ : Measure ℝ} {f : ℝ → ℂ} (hf : Integrable f μ) :
     (∫ x, (f x).re ∂μ) = (∫ x, f x ∂μ).re :=
@@ -240,7 +244,7 @@ private lemma scale_singularIntegral (N : ℕ) (hN : 0 < N) :
         F (r * u) (r * v) (r⁻¹ * t) = Real.cos (2 * Real.pi * ((u + r⁻¹ - 2 * v) * t)) := by
       unfold F
       congr 1
-      field_simp [hr.ne'] <;> ring
+      field_simp [hr.ne']
     rw [h]
     simp_rw [hy, harg, integral_const_mul]
     rw [model]
@@ -255,7 +259,7 @@ private lemma scale_singularIntegral (N : ℕ) (hN : 0 < N) :
       r * ∫ t in Icc (-cutoff N) (cutoff N), model r⁻¹ t
   rw [houter]
   simp_rw [hx, integral_const_mul]
-  field_simp [hr.ne'] <;> ring
+  field_simp [hr.ne']
 
 private lemma tendsto_normalized :
     Tendsto (fun N : ℕ => ∫ t in Icc (-cutoff N) (cutoff N),
@@ -285,7 +289,8 @@ private lemma tendsto_normalized :
         have hb : ‖(phase (-((N : ℝ)⁻¹ * t)) * kernel t).re‖ ≤ ‖kernel t‖ := by
           simpa [Real.norm_eq_abs, norm_mul, norm_phase] using
             Complex.abs_re_le_norm (phase (-((N : ℝ)⁻¹ * t)) * kernel t)
-        rw [Φ, norm_div, Real.norm_of_nonneg (by norm_num : (0 : ℝ) ≤ 2)]
+        change ‖(phase (-((N : ℝ)⁻¹ * t)) * kernel t).re / 2‖ ≤ _
+        rw [norm_div, Real.norm_of_nonneg (by norm_num : (0 : ℝ) ≤ 2)]
         exact ((div_le_self (norm_nonneg _) (by norm_num)).trans hb).trans (norm_kernel t)
       · rw [indicator_of_notMem ht, norm_zero]
         positivity
@@ -293,7 +298,7 @@ private lemma tendsto_normalized :
   · exact ae_of_all _ fun t => by
       have hc : Continuous (fun a : ℝ => Φ a t) := by unfold Φ phase; fun_prop
       have hl : Tendsto (fun N : ℕ => Φ (N : ℝ)⁻¹ t) atTop (𝓝 ((kernel t).re / 2)) := by
-        simpa [Φ, phase] using (hc.continuousAt (x := 0)).tendsto.comp hinv
+        simpa [Φ, phase, Function.comp_def] using (hc.continuousAt (x := 0)).tendsto.comp hinv
       apply hl.congr'
       filter_upwards [hcut.eventually_ge_atTop |t|] with N hN
       have ht : t ∈ w N := ⟨by linarith [(neg_le_abs t).trans hN], (le_abs_self t).trans hN⟩
